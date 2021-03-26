@@ -1,0 +1,18 @@
+name: CobbleMelters
+main: io.github.levtey.CobbleMelters.CobbleMelters
+api-version: 1.16
+version: 0.0.1
+author: levtey
+depend: [RedLib, BentoBox]
+softdepend: [CMI]
+commands:
+  melters:
+    aliases: [cobblemelters]
+    usage: /<command> help
+    permission: melters.seecommand
+permissions:
+  melters.admin:
+    default: op
+    children:
+      melters.reload: true
+      melters.seecommand: true

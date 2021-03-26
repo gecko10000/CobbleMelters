@@ -1,0 +1,9 @@
+cobblePerLava: 200
+# In ticks
+meltInterval: 200
+item:
+  material: iron_block
+  name: "{#red>}Cobble Melter{#yellow<}"
+  lore:
+  - "&aProgress: &e%progress%/%total%"
+  enchanted: true
