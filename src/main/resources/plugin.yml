@@ -16,3 +16,4 @@ permissions:
     children:
       melters.reload: true
       melters.seecommand: true
+      melters.give: true

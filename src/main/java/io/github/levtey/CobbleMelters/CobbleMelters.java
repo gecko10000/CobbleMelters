@@ -7,10 +7,15 @@ import java.util.stream.Collectors;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
+import org.bukkit.SoundCategory;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Hopper;
+import org.bukkit.block.data.AnaloguePowerable;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.type.RedstoneWire;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
@@ -21,6 +26,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
 import com.Zrips.CMI.Containers.CMIChatColor;
+import com.Zrips.CMI.Containers.CMILocation;
+import com.Zrips.CMI.Modules.Holograms.CMIHologram;
 
 import net.md_5.bungee.api.ChatColor;
 import redempt.redlib.blockdata.BlockDataManager;
@@ -31,25 +38,28 @@ public class CobbleMelters extends JavaPlugin {
 	
 	public final String cobbleData = "cobble";
 	public final String lavaData = "lava";
-	private boolean isCMIEnabled = Bukkit.getPluginManager().isPluginEnabled("CMI");
+	private boolean isCMIEnabled;
 	private BlockDataManager manager;
 	public final NamespacedKey cobbleKey = new NamespacedKey(this, "cobble");
 	public final NamespacedKey lavaKey = new NamespacedKey(this, "lava");
 	private final Set<BlockFace> inputDirections = EnumSet.of(BlockFace.UP, BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST);
+	public final Set<BlockFace> redstonePowerDirections = EnumSet.of(BlockFace.NORTH, BlockFace.EAST, BlockFace.SOUTH, BlockFace.WEST);
 	private BukkitTask hopperTask;
-	private BukkitTask meltOrPullTask;
+	private BukkitTask meltTask;
 
 	public void onEnable() {
+		isCMIEnabled = Bukkit.getPluginManager().isPluginEnabled("CMI");
 		saveDefaultConfig();
 		manager = new BlockDataManager(getDataFolder().toPath().resolve("melters.db"));
 		new Listeners(this);
 		new MelterCommand(this);
 		hopperTask = hopperTask();
-		meltOrPullTask = meltOrPullTask();
+		meltTask = meltTask();
 	}
 	
 	public void onDisable() {
 		hopperTask.cancel();
+		meltTask.cancel();
 		manager.saveAndClose();
 	}
 	
@@ -61,10 +71,10 @@ public class CobbleMelters extends JavaPlugin {
 		}, 0L, Bukkit.spigot().getConfig().getLong("world-settings.default.ticks-per.hopper-transfer"));
 	}
 	
-	public BukkitTask meltOrPullTask() {
+	public BukkitTask meltTask() {
 		return Bukkit.getScheduler().runTaskTimer(this, () -> {
 			for (DataBlock dataBlock : manager.getAllLoaded()) {
-				doTickOrPull(dataBlock);
+				doMelt(dataBlock);
 			}
 		}, 0L, getConfig().getLong("meltInterval", 200));
 	}
@@ -74,12 +84,14 @@ public class CobbleMelters extends JavaPlugin {
 		for (BlockFace face : inputDirections) {
 			Block adjacent = block.getRelative(face);
 			if (adjacent.getType() != Material.HOPPER) continue;
-			BlockFace facing = ((Directional) adjacent.getBlockData()).getFacing();
+			org.bukkit.block.data.type.Hopper blockData = (org.bukkit.block.data.type.Hopper) adjacent.getBlockData();
+			BlockFace facing = blockData.getFacing();
 			if (face == BlockFace.UP && facing != BlockFace.DOWN) continue;
 			if (face == BlockFace.NORTH && facing != BlockFace.SOUTH) continue;
 			if (face == BlockFace.SOUTH && facing != BlockFace.NORTH) continue;
 			if (face == BlockFace.EAST && facing != BlockFace.WEST) continue;
 			if (face == BlockFace.WEST && facing != BlockFace.EAST) continue;
+			if (!blockData.isEnabled()) continue;
 			Hopper hopper = (Hopper) adjacent.getState();
 			int amountToFind = Bukkit.spigot().getConfig().getInt("world-settings.default.hopper-amount", 1);
 			int movedAmount = Math.min(amountToFind, ItemUtils.countAndRemove(hopper.getInventory(), Material.COBBLESTONE, amountToFind));
@@ -87,21 +99,34 @@ public class CobbleMelters extends JavaPlugin {
 		}
 	}
 	
-	public void doTickOrPull(DataBlock dataBlock) {
+	public void doMelt(DataBlock dataBlock) {
 		Block underBlock = dataBlock.getBlock().getRelative(BlockFace.DOWN);
 		Material underBlockType = underBlock.getType();
-		if (underBlockType == Material.HOPPER && dataBlock.getInt(lavaData) > 0) {
-			Inventory hopperInv = ((Hopper) underBlock.getState()).getInventory();
-			int buckets = ItemUtils.countAndRemove(hopperInv, Material.BUCKET, 1);
-			if (buckets == 0) return;
-			dataBlock.set(lavaData, dataBlock.getInt(lavaData) - 1);
-			hopperInv.addItem(new ItemStack(Material.LAVA_BUCKET));
-		} else if (underBlockType == Material.LAVA || underBlockType == Material.FIRE) {
+		if (underBlockType == Material.LAVA || underBlockType == Material.FIRE) {
 			int progress = dataBlock.getInt(cobbleData);
 			int required = getConfig().getInt("cobblePerLava");
 			if (progress < required) return;
 			dataBlock.set(cobbleData, dataBlock.getInt(cobbleData) - required);
 			dataBlock.set(lavaData, dataBlock.getInt(lavaData) + 1);
+			underBlock.getWorld().playSound(
+					dataBlock.getBlock().getLocation().add(0.5, 0.5, 0.5),
+					Sound.valueOf(getConfig().getString("meltSound.sound", "block_lava_extinguish").toUpperCase()),
+					SoundCategory.BLOCKS,
+					(float) getConfig().getDouble("meltSound.volume", 1),
+					(float) getConfig().getDouble("meltSound.pitch", 1));
+		}
+		doRedstone(dataBlock);
+	}
+	
+	public void doRedstone(DataBlock dataBlock) {
+		if (dataBlock == null) return;
+		Block block = dataBlock.getBlock();
+		for (BlockFace face : redstonePowerDirections) {
+			Block adjacentBlock = block.getRelative(face);
+			if (adjacentBlock.getType() != Material.REDSTONE_WIRE) continue;
+			RedstoneWire redstone = (RedstoneWire) adjacentBlock.getBlockData();
+			redstone.setPower(Math.max(redstone.getPower(), Math.min(15, dataBlock.getInt(lavaData))));
+			adjacentBlock.setBlockData(redstone);
 		}
 	}
 	

@@ -9,6 +9,9 @@ import org.bukkit.entity.Player;
 public class MelterCommand implements CommandExecutor {
 	
 	private CobbleMelters plugin;
+	private final String noPerms = "&cYou don't have permission!";
+	private final String reloaded = "{#green}Configs reloaded!";
+	private final String given = "&e%player% {#green}has been given a &7&l%cobble%&0|{#orange}&l%lava% &eMelter.";
 	
 	public MelterCommand(CobbleMelters plugin) {
 		this.plugin = plugin;
@@ -19,10 +22,12 @@ public class MelterCommand implements CommandExecutor {
 	public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 		if (args.length == 0) return true;
 		if (args[0].equalsIgnoreCase("reload")) {
-			if (!sender.hasPermission("melters.reload")) return true;
+			if (!sender.hasPermission("melters.reload")) return response(sender, noPerms);
 			plugin.saveDefaultConfig();
 			plugin.reloadConfig();
+			return response(sender, reloaded);
 		} else if (args[0].equalsIgnoreCase("give")) {
+			if (!sender.hasPermission("melters.give")) return response(sender, noPerms);
 			Player targetPlayer = null;
 			if (args.length > 1) {
 				targetPlayer = Bukkit.getPlayer(args[1]);
@@ -43,7 +48,16 @@ public class MelterCommand implements CommandExecutor {
 				}
 			}
 			targetPlayer.getInventory().addItem(plugin.getMelter(lava, cobble));
+			return response(sender, given
+					.replace("%player%", targetPlayer.getName())
+					.replace("%cobble%", cobble + "")
+					.replace("%lava%", lava + ""));
 		}
+		return true;
+	}
+	
+	private boolean response(CommandSender sender, String message) {
+		sender.sendMessage(plugin.makeReadable(message));
 		return true;
 	}
 

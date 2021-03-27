@@ -1,9 +1,13 @@
-cobblePerLava: 200
+cobblePerLava: 5000
 # In ticks
 meltInterval: 200
+meltSound:
+  sound: block_lava_extinguish
+  volume: 1
+  pitch: 1
 item:
   material: iron_block
   name: "{#red>}Cobble Melter{#yellow<}"
   lore:
-  - "&aProgress: &e%progress%/%total%"
+  - "&a&l%cobble% &7cobble&8 | &a&l%lava% {#orange}lava"
   enchanted: true
