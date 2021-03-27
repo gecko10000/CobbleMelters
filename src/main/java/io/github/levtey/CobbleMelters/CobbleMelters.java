@@ -32,6 +32,7 @@ import com.Zrips.CMI.Modules.Holograms.CMIHologram;
 import net.md_5.bungee.api.ChatColor;
 import redempt.redlib.blockdata.BlockDataManager;
 import redempt.redlib.blockdata.DataBlock;
+import redempt.redlib.itemutils.ItemBuilder;
 import redempt.redlib.itemutils.ItemUtils;
 
 public class CobbleMelters extends JavaPlugin {
@@ -86,11 +87,7 @@ public class CobbleMelters extends JavaPlugin {
 			if (adjacent.getType() != Material.HOPPER) continue;
 			org.bukkit.block.data.type.Hopper blockData = (org.bukkit.block.data.type.Hopper) adjacent.getBlockData();
 			BlockFace facing = blockData.getFacing();
-			if (face == BlockFace.UP && facing != BlockFace.DOWN) continue;
-			if (face == BlockFace.NORTH && facing != BlockFace.SOUTH) continue;
-			if (face == BlockFace.SOUTH && facing != BlockFace.NORTH) continue;
-			if (face == BlockFace.EAST && facing != BlockFace.WEST) continue;
-			if (face == BlockFace.WEST && facing != BlockFace.EAST) continue;
+			if (face.getOppositeFace() != facing) continue;
 			if (!blockData.isEnabled()) continue;
 			Hopper hopper = (Hopper) adjacent.getState();
 			int amountToFind = Bukkit.spigot().getConfig().getInt("world-settings.default.hopper-amount", 1);
@@ -131,21 +128,19 @@ public class CobbleMelters extends JavaPlugin {
 	}
 	
 	public ItemStack getMelter(int lava, int cobble) {
-		ItemStack melter = new ItemStack(melterMaterial());
-		ItemMeta melterMeta = melter.getItemMeta();
-		melterMeta.setDisplayName(makeReadable(getConfig().getString("item.name")));
-		melterMeta.setLore(getConfig().getStringList("item.lore").stream()
+		ItemBuilder builder = new ItemBuilder(melterMaterial())
+		.setName(makeReadable(getConfig().getString("item.name")))
+		.setLore(getConfig().getStringList("item.lore").stream()
 				.map(str -> str.replace("%lava%", lava + ""))
 				.map(str -> str.replace("%cobble%", cobble + ""))
-				.map(this::makeReadable).collect(Collectors.toList()));
+				.map(this::makeReadable).collect(Collectors.toList()).toArray(new String[0]))
+		.addPersistentTag(lavaKey, PersistentDataType.INTEGER, lava)
+		.addPersistentTag(cobbleKey, PersistentDataType.INTEGER, cobble);
 		if (getConfig().getBoolean("item.enchanted")) {
-			melterMeta.addEnchant(Enchantment.DURABILITY, 1, true);
-			melterMeta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+			builder.addEnchant(Enchantment.DURABILITY, 1)
+			.addItemFlags(ItemFlag.HIDE_ENCHANTS);
 		}
-		melterMeta.getPersistentDataContainer().set(lavaKey, PersistentDataType.INTEGER, lava);
-		melterMeta.getPersistentDataContainer().set(cobbleKey, PersistentDataType.INTEGER, cobble);
-		melter.setItemMeta(melterMeta);
-		return melter;
+		return builder.clone();
 	}
 	
 	public Material melterMaterial() {
