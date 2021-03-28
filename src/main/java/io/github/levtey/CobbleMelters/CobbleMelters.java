@@ -99,19 +99,18 @@ public class CobbleMelters extends JavaPlugin {
 	public void doMelt(DataBlock dataBlock) {
 		Block underBlock = dataBlock.getBlock().getRelative(BlockFace.DOWN);
 		Material underBlockType = underBlock.getType();
-		if (underBlockType == Material.LAVA || underBlockType == Material.FIRE) {
-			int progress = dataBlock.getInt(cobbleData);
-			int required = getConfig().getInt("cobblePerLava");
-			if (progress < required) return;
-			dataBlock.set(cobbleData, dataBlock.getInt(cobbleData) - required);
-			dataBlock.set(lavaData, dataBlock.getInt(lavaData) + 1);
-			underBlock.getWorld().playSound(
-					dataBlock.getBlock().getLocation().add(0.5, 0.5, 0.5),
-					Sound.valueOf(getConfig().getString("meltSound.sound", "block_lava_extinguish").toUpperCase()),
-					SoundCategory.BLOCKS,
-					(float) getConfig().getDouble("meltSound.volume", 1),
-					(float) getConfig().getDouble("meltSound.pitch", 1));
-		}
+		if (underBlockType != Material.FIRE) return;
+		int progress = dataBlock.getInt(cobbleData);
+		int required = getConfig().getInt("cobblePerLava");
+		if (progress < required) return;
+		dataBlock.set(cobbleData, dataBlock.getInt(cobbleData) - required);
+		dataBlock.set(lavaData, dataBlock.getInt(lavaData) + 1);
+		underBlock.getWorld().playSound(
+			dataBlock.getBlock().getLocation().add(0.5, 0.5, 0.5),
+			Sound.valueOf(getConfig().getString("meltSound.sound", "block_lava_extinguish").toUpperCase()),
+			SoundCategory.BLOCKS,
+		(float) getConfig().getDouble("meltSound.volume", 1),
+		(float) getConfig().getDouble("meltSound.pitch", 1));
 		doRedstone(dataBlock);
 	}
 	
