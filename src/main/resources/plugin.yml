@@ -17,3 +17,4 @@ permissions:
       melters.reload: true
       melters.seecommand: true
       melters.give: true
+      melters.bypass: true

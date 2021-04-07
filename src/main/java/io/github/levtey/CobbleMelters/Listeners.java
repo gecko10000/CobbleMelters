@@ -13,6 +13,7 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.Dispenser;
 import org.bukkit.block.Hopper;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -30,6 +31,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -86,11 +88,21 @@ public class Listeners implements Listener {
 	}
 	
 	@EventHandler
-	public void onCheck(PlayerInteractEvent evt) {
+	public void onRightClick(PlayerInteractEvent evt) {
 		if (evt.getAction() != Action.RIGHT_CLICK_BLOCK || evt.getHand() == EquipmentSlot.OFF_HAND) return;
 		DataBlock dataBlock = plugin.getManager().getExisting(evt.getClickedBlock());
 		if (dataBlock == null) return;
-		evt.getPlayer().sendMessage(dataBlock.getInt(plugin.cobbleData) + " cobble | " + dataBlock.getInt(plugin.lavaData) + " lava");
+		Player player = evt.getPlayer();
+		PlayerInventory playerInv = player.getInventory();
+		if (dataBlock.getInt(plugin.lavaData) > 0 && evt.getItem() != null && evt.getItem().getType() == Material.BUCKET) {
+			Island island = BentoBox.getInstance().getIslands().getProtectedIslandAt(evt.getClickedBlock().getLocation()).orElse(null);
+			if (!player.hasPermission("melters.bypass") && (island == null || !island.getMemberSet().contains(player.getUniqueId()))) return;
+			dataBlock.set(plugin.lavaData, dataBlock.getInt(plugin.lavaData) - 1);
+			ItemUtils.remove(playerInv, Material.BUCKET, 1);
+			playerInv.addItem(new ItemStack(Material.LAVA_BUCKET));
+		} else {
+			evt.getPlayer().sendMessage(dataBlock.getInt(plugin.cobbleData) + " cobble | " + dataBlock.getInt(plugin.lavaData) + " lava");
+		}
 	}
 	
 	@EventHandler
