@@ -52,6 +52,7 @@ public class CobbleMelters extends JavaPlugin {
 		isCMIEnabled = Bukkit.getPluginManager().isPluginEnabled("CMI");
 		saveDefaultConfig();
 		manager = new BlockDataManager(getDataFolder().toPath().resolve("melters.db"));
+		manager.setAutoSave(false);
 		new Listeners(this);
 		new MelterCommand(this);
 		hopperTask = hopperTask();
@@ -92,7 +93,9 @@ public class CobbleMelters extends JavaPlugin {
 			Hopper hopper = (Hopper) adjacent.getState();
 			int amountToFind = Bukkit.spigot().getConfig().getInt("world-settings.default.hopper-amount", 1);
 			int movedAmount = Math.min(amountToFind, ItemUtils.countAndRemove(hopper.getInventory(), Material.COBBLESTONE, amountToFind));
-			dataBlock.set(cobbleData, dataBlock.getInt(cobbleData) + movedAmount);
+			int newAmount = dataBlock.getInt(cobbleData) + movedAmount;
+			dataBlock.set(cobbleData, newAmount);
+			if (newAmount % 100 == 0) manager.save();
 		}
 	}
 	
@@ -105,6 +108,7 @@ public class CobbleMelters extends JavaPlugin {
 		if (progress < required) return;
 		dataBlock.set(cobbleData, dataBlock.getInt(cobbleData) - required);
 		dataBlock.set(lavaData, dataBlock.getInt(lavaData) + 1);
+		manager.save();
 		underBlock.getWorld().playSound(
 			dataBlock.getBlock().getLocation().add(0.5, 0.5, 0.5),
 			Sound.valueOf(getConfig().getString("meltSound.sound", "block_lava_extinguish").toUpperCase()),
