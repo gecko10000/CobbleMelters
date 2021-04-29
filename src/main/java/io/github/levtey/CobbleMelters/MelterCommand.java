@@ -1,10 +1,14 @@
 package io.github.levtey.CobbleMelters;
 
 import org.bukkit.Bukkit;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
+import redempt.redlib.blockdata.DataBlock;
+import redempt.redlib.misc.LocationUtils;
 
 public class MelterCommand implements CommandExecutor {
 	
@@ -52,6 +56,17 @@ public class MelterCommand implements CommandExecutor {
 					.replace("%player%", targetPlayer.getName())
 					.replace("%cobble%", cobble + "")
 					.replace("%lava%", lava + ""));
+		} else if (args[0].equalsIgnoreCase("debug")) {
+			if (!sender.hasPermission("melters.debug")) return response(sender, noPerms);
+			if (!(sender instanceof Player)) return true;
+			Player player = (Player) sender;
+			Block target = player.getTargetBlockExact(4);
+			if (target == null) {
+				plugin.getManager().getAll().forEach(db -> player.sendMessage(LocationUtils.toString(db.getBlock(), ":")));
+			} else {
+				DataBlock db = plugin.getManager().getExisting(target);
+				player.sendMessage("This is " + (db == null ? "not" : "") + "a data block");
+			}
 		}
 		return true;
 	}

@@ -18,3 +18,4 @@ permissions:
       melters.seecommand: true
       melters.give: true
       melters.bypass: true
+      melters.debug: true
