@@ -129,12 +129,7 @@ public class Listeners implements Listener {
 	
 	@EventHandler
 	public void onChunkLoad(ChunkLoadEvent evt) {
-		Chunk chunk = evt.getChunk();
-		Location chunkCenter = chunk.getBlock(8, 0, 8).getLocation();
-		for (DataBlock dataBlock : plugin.getManager().getNearby(chunkCenter, 8)) {
-			if (!dataBlock.getBlock().getChunk().equals(chunk)) continue;
-			plugin.doRedstone(dataBlock);
-		}
+		plugin.getManager().load(evt.getChunk()).forEach(plugin::doRedstone);
 	}
 	
 	@EventHandler
