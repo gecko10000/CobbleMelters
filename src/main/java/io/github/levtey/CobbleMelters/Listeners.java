@@ -33,6 +33,7 @@ import org.bukkit.persistence.PersistentDataType;
 import redempt.redlib.blockdata.DataBlock;
 import redempt.redlib.blockdata.events.DataBlockMoveEvent;
 import redempt.redlib.itemutils.ItemUtils;
+import redempt.redlib.misc.Task;
 import world.bentobox.bentobox.BentoBox;
 import world.bentobox.bentobox.api.events.island.IslandResetEvent;
 import world.bentobox.bentobox.database.objects.Island;
@@ -84,18 +85,24 @@ public class Listeners implements Listener {
 	
 	@EventHandler
 	public void onRightClick(PlayerInteractEvent evt) {
-		if (evt.getAction() != Action.RIGHT_CLICK_BLOCK || evt.getHand() == EquipmentSlot.OFF_HAND) return;
+		if (evt.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 		DataBlock dataBlock = plugin.getManager().getExisting(evt.getClickedBlock());
 		if (dataBlock == null) return;
 		Player player = evt.getPlayer();
 		PlayerInventory playerInv = player.getInventory();
-		if (dataBlock.getInt(plugin.lavaData) > 0 && evt.getItem() != null && evt.getItem().getType() == Material.BUCKET) {
-			Island island = BentoBox.getInstance().getIslands().getProtectedIslandAt(evt.getClickedBlock().getLocation()).orElse(null);
-			if (!player.hasPermission("melters.bypass") && (island == null || !island.getMemberSet().contains(player.getUniqueId()))) return;
-			dataBlock.set(plugin.lavaData, dataBlock.getInt(plugin.lavaData) - 1);
-			ItemUtils.remove(playerInv, Material.BUCKET, 1);
-			playerInv.addItem(new ItemStack(Material.LAVA_BUCKET));
+		if (dataBlock.getInt(plugin.lavaData) > 0 && evt.getItem() != null) {
+			Material type = evt.getItem().getType();
+			evt.setCancelled(true);
+			if (type == Material.BUCKET || type == Material.WATER_BUCKET) {
+				Island island = BentoBox.getInstance().getIslands().getProtectedIslandAt(evt.getClickedBlock().getLocation()).orElse(null);
+				if (!player.hasPermission("melters.bypass") && (island == null || !island.getMemberSet().contains(player.getUniqueId()))) return;
+				dataBlock.set(plugin.lavaData, dataBlock.getInt(plugin.lavaData) - 1);
+				playerInv.addItem(new ItemStack(type == Material.BUCKET ? Material.LAVA_BUCKET : Material.OBSIDIAN));
+				ItemUtils.remove(playerInv, type, 1);
+				if (type == Material.WATER_BUCKET) playerInv.setItem(evt.getHand(), new ItemStack(Material.BUCKET));
+			}
 		} else {
+			if (evt.getHand() == EquipmentSlot.OFF_HAND) return;
 			evt.getPlayer().sendMessage(dataBlock.getInt(plugin.cobbleData) + " cobble | " + dataBlock.getInt(plugin.lavaData) + " lava");
 		}
 	}
@@ -129,7 +136,7 @@ public class Listeners implements Listener {
 	
 	@EventHandler
 	public void onChunkLoad(ChunkLoadEvent evt) {
-		plugin.getManager().load(evt.getChunk()).forEach(plugin::doRedstone);
+		Task.syncDelayed(() -> plugin.getManager().load(evt.getChunk()).forEach(plugin::doRedstone));
 	}
 	
 	@EventHandler
