@@ -62,10 +62,13 @@ public class MelterCommand implements CommandExecutor {
 			Player player = (Player) sender;
 			Block target = player.getTargetBlockExact(4);
 			if (target == null) {
+				player.sendMessage("All: ");
 				plugin.getManager().getAll().forEach(db -> player.sendMessage(LocationUtils.toString(db.getBlock(), ":")));
+				player.sendMessage("Loaded: ");
+				plugin.getManager().getAllLoaded().forEach(db -> player.sendMessage(LocationUtils.toString(db.getBlock(), ":")));
 			} else {
 				DataBlock db = plugin.getManager().getExisting(target);
-				player.sendMessage("This is " + (db == null ? "not" : "") + "a data block");
+				player.sendMessage("This is " + (db == null ? "not  " : "") + "a data block");
 			}
 		}
 		return true;
