@@ -3,7 +3,6 @@ package io.github.levtey.CobbleMelters;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -92,14 +91,14 @@ public class Listeners implements Listener {
 		PlayerInventory playerInv = player.getInventory();
 		if (dataBlock.getInt(plugin.lavaData) > 0 && evt.getItem() != null) {
 			Material type = evt.getItem().getType();
-			evt.setCancelled(true);
 			if (type == Material.BUCKET || type == Material.WATER_BUCKET) {
+				evt.setCancelled(true);
 				Island island = BentoBox.getInstance().getIslands().getProtectedIslandAt(evt.getClickedBlock().getLocation()).orElse(null);
 				if (!player.hasPermission("melters.bypass") && (island == null || !island.getMemberSet().contains(player.getUniqueId()))) return;
 				dataBlock.set(plugin.lavaData, dataBlock.getInt(plugin.lavaData) - 1);
 				playerInv.addItem(new ItemStack(type == Material.BUCKET ? Material.LAVA_BUCKET : Material.OBSIDIAN));
 				ItemUtils.remove(playerInv, type, 1);
-				if (type == Material.WATER_BUCKET) playerInv.setItem(evt.getHand(), new ItemStack(Material.BUCKET));
+				if (type == Material.WATER_BUCKET) playerInv.addItem(new ItemStack(Material.BUCKET));
 			}
 		} else {
 			if (evt.getHand() == EquipmentSlot.OFF_HAND) return;
