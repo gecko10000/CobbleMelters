@@ -96,9 +96,11 @@ public class Listeners implements Listener {
 				Island island = BentoBox.getInstance().getIslands().getProtectedIslandAt(evt.getClickedBlock().getLocation()).orElse(null);
 				if (!player.hasPermission("melters.bypass") && (island == null || !island.getMemberSet().contains(player.getUniqueId()))) return;
 				dataBlock.set(plugin.lavaData, dataBlock.getInt(plugin.lavaData) - 1);
-				playerInv.addItem(new ItemStack(type == Material.BUCKET ? Material.LAVA_BUCKET : Material.OBSIDIAN));
+				playerInv.addItem(new ItemStack(type == Material.BUCKET ? Material.LAVA_BUCKET : Material.OBSIDIAN))
+				.forEach((index, item) -> player.getWorld().dropItem(player.getLocation(), item));
 				ItemUtils.remove(playerInv, type, 1);
-				if (type == Material.WATER_BUCKET) playerInv.addItem(new ItemStack(Material.BUCKET));
+				if (type == Material.WATER_BUCKET) playerInv.addItem(new ItemStack(Material.BUCKET))
+				.forEach((index, item) -> player.getWorld().dropItem(player.getLocation(), item));
 			}
 		} else {
 			if (evt.getHand() == EquipmentSlot.OFF_HAND) return;
